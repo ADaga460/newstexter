@@ -11,7 +11,7 @@ a question and it replies with current, web-grounded info.
   staying factually faithful to the source.
 - **Tiers**: every story is labeled `breaking` / `high` / `medium` / `low` and
   ordered breaking-first.
-- **Curation + replies** use Google **Gemini** (`gemini-2.0-flash`, free tier);
+- **Curation + replies** use Google **Gemini** (`gemini-2.5-flash`, free tier);
   replies are grounded with Gemini's built-in Google Search.
 
 ## How it works

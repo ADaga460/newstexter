@@ -3,6 +3,6 @@
 __version__ = "0.1.0"
 
 # The Gemini model used for curation and inbound replies. Configurable here.
-# gemini-2.0-flash is fast and on the free tier. gemini-2.5-flash also works if
-# you want a bit more quality (still free tier).
-MODEL = "gemini-2.0-flash"
+# gemini-2.5-flash is on the free tier and supports structured output + Google
+# Search grounding. gemini-2.5-flash-lite is a cheaper/faster free alternative.
+MODEL = "gemini-2.5-flash"
