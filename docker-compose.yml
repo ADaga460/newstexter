@@ -1,0 +1,21 @@
+# One-command self-hosting (e.g. on an Oracle Cloud Always Free VM):
+#   docker compose up -d --build
+#
+# Reads secrets from a local .env file (GEMINI_API_KEY, TWILIO_*). The named
+# volume persists the SQLite DB across restarts and reboots; restart:unless-stopped
+# brings it back automatically after a crash or VM reboot.
+services:
+  newstexter:
+    build: .
+    container_name: newstexter
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - NEWSTEXTER_DB=/data/newstexter.db
+    volumes:
+      - newstexter-data:/data
+    ports:
+      - "8000:8000"   # only needed if you expose inbound replies (see README)
+
+volumes:
+  newstexter-data:
