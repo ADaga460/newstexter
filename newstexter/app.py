@@ -7,12 +7,12 @@ import os
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import FastAPI, Request, Response
 
 from .config import load_config
 from .format import chunk
-from .main import run_digest
+from .main import run_cycle
 from .reply import answer
 from . import store
 
@@ -33,23 +33,16 @@ ALLOWLIST = {_normalize(n) for n in config.recipients}
 
 
 def _schedule_jobs() -> None:
-    settings = config.settings
+    minutes = config.settings.poll_interval_minutes
     scheduler.add_job(
-        run_digest,
-        CronTrigger.from_crontab(settings.digest_cron),
-        id="daily_digest",
+        lambda: run_cycle(config),
+        IntervalTrigger(minutes=minutes),
+        id="poll",
         replace_existing=True,
+        max_instances=1,          # don't overlap if a cycle runs long
+        coalesce=True,            # collapse missed runs into one
     )
-    log.info("Scheduled daily digest: %s", settings.digest_cron)
-
-    if settings.breaking_check_cron:
-        scheduler.add_job(
-            lambda: run_digest(breaking_only=True),
-            CronTrigger.from_crontab(settings.breaking_check_cron),
-            id="breaking_check",
-            replace_existing=True,
-        )
-        log.info("Scheduled breaking check: %s", settings.breaking_check_cron)
+    log.info("Scheduled story poll every %d min", minutes)
 
 
 @asynccontextmanager

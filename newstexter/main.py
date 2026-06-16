@@ -1,14 +1,15 @@
-"""Digest pipeline and CLI entry point.
+"""Poll cycle (per-story delivery) and CLI entry point.
 
-  python -m newstexter.main --dry-run     # print, don't send
-  python -m newstexter.main                # send the daily digest
-  python -m newstexter.main --breaking     # send only breaking-tier stories
+  python -m newstexter.main --dry-run     # preview curation, send nothing
+  python -m newstexter.main                # run one live poll cycle now
+
+The scheduled service (newstexter.app) runs `run_cycle` every few minutes so new
+stories are texted out individually as they appear — not batched into a digest.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import logging
 
 from .config import Config, load_config
@@ -21,17 +22,13 @@ from . import store
 log = logging.getLogger(__name__)
 
 
-def _hash(link: str) -> str:
-    return hashlib.sha256(link.encode("utf-8")).hexdigest()
+def run_cycle(config: Config | None = None, *, dry_run: bool = False) -> int:
+    """One poll cycle: text any newly-appeared qualifying stories, one per story.
 
-
-def run_digest(
-    config: Config | None = None,
-    *,
-    dry_run: bool = False,
-    breaking_only: bool = False,
-) -> int:
-    """Run the full pipeline once. Returns the number of messages sent."""
+    Returns the number of messages sent. On the very first run (empty DB) it
+    seeds existing stories as 'seen' WITHOUT sending, so deploying doesn't blast
+    a backlog — only stories that break afterward get texted.
+    """
     config = config or load_config()
     settings = config.settings
 
@@ -41,18 +38,23 @@ def run_digest(
             lookback_hours=settings.lookback_hours,
             is_seen=lambda h: store.is_seen(conn, h),
         )
-        items = curate(candidates, settings)
-
-        if breaking_only:
-            items = [it for it in items if it.tier == "breaking"]
-        else:
-            items = filter_by_min_tier(items, settings.min_tier)
-        items = order_items(items)
-
-        if not items:
-            log.info("No stories to send after filtering.")
+        if not candidates:
+            log.info("No new stories this cycle.")
             return 0
 
+        # Cold start: seed without sending so we don't blast 24h of backlog.
+        if not dry_run and store.is_empty(conn):
+            for a in candidates:
+                store.mark_seen(conn, a.url_hash)
+            log.info(
+                "Seeded %d existing stories; new stories will be texted as they appear.",
+                len(candidates),
+            )
+            return 0
+
+        items = order_items(
+            filter_by_min_tier(curate(candidates, settings), settings.min_tier)
+        )
         bodies = build_messages(items, one_per_item=settings.one_message_per_item)
         sent = broadcast(
             config.recipients,
@@ -61,27 +63,41 @@ def run_digest(
             dry_run=dry_run,
         )
 
-        # Dry-run only: also show what a neutral (unslanted) editor would pick,
-        # so you can compare against the editorial selection above.
-        if dry_run and not breaking_only:
-            neutral = order_items(curate(candidates, settings, neutral=True, limit=settings.max_items))
-            _safe_print(
-                f"\n===== NEUTRAL TOP {settings.max_items} "
-                "(pure-neutral comparison — not part of what gets sent) ====="
-            )
-            _safe_print(render_comparison(neutral) if neutral else "(none)")
-
-        # Record what we sent so it isn't repeated next run (skip in dry-run).
+        # Each candidate considered this cycle is marked seen so it's evaluated
+        # exactly once (no re-sends, no pile-up). Skip in dry-run.
         if not dry_run:
-            for it in items:
-                store.mark_seen(conn, _hash(it.link))
+            for a in candidates:
+                store.mark_seen(conn, a.url_hash)
         return sent
 
 
+def preview(config: Config | None = None) -> None:
+    """Dry-run tuning view: show the slanted picks + a neutral comparison.
+
+    Ignores the seen-DB and sends nothing — purely for checking the curation and
+    voice against current feeds.
+    """
+    config = config or load_config()
+    settings = config.settings
+
+    candidates = fetch_candidates(config.feeds, lookback_hours=settings.lookback_hours)
+    items = order_items(filter_by_min_tier(curate(candidates, settings), settings.min_tier))
+    bodies = build_messages(items, one_per_item=settings.one_message_per_item)
+    broadcast(config.recipients, bodies, from_number=None, dry_run=True)
+
+    neutral = order_items(curate(candidates, settings, neutral=True, limit=settings.max_items))
+    _safe_print(
+        f"\n===== NEUTRAL TOP {settings.max_items} "
+        "(pure-neutral comparison — not part of what gets sent) ====="
+    )
+    _safe_print(render_comparison(neutral) if neutral else "(none)")
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="NewsTexter digest runner")
-    parser.add_argument("--dry-run", action="store_true", help="print instead of sending")
-    parser.add_argument("--breaking", action="store_true", help="send only breaking-tier stories")
+    parser = argparse.ArgumentParser(description="NewsTexter")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="preview curation; send nothing"
+    )
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -89,7 +105,10 @@ def main() -> None:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    run_digest(dry_run=args.dry_run, breaking_only=args.breaking)
+    if args.dry_run:
+        preview()
+    else:
+        run_cycle()
 
 
 if __name__ == "__main__":

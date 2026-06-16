@@ -18,8 +18,11 @@ a question and it replies with current, web-grounded info.
 
 One always-on FastAPI process does two things:
 
-1. **Scheduled digest** (APScheduler): fetch RSS → drop stale/already-sent →
-   Gemini selects, tiers, and writes each story → text via Twilio.
+1. **Story polling** (APScheduler): every few minutes, fetch RSS → keep only
+   newly-published stories (the seen-DB dedupes) → Gemini selects, tiers, and
+   writes the worthy ones → text them out **individually, as they appear**. On
+   first run it seeds existing stories without sending, so you only get news that
+   breaks afterward — never a backlog blast.
 2. **Inbound replies** (`POST /sms`): a Twilio webhook routes texts from
    allowlisted numbers to Gemini (+ Google Search grounding), with short
    per-number history.
@@ -33,11 +36,12 @@ newstexter/
 ## Cost
 
 Built to run **free**. Gemini's free tier ([aistudio.google.com](https://aistudio.google.com/apikey))
-comfortably covers a once-daily digest and occasional replies, including the
-Google Search grounding used for replies (which has its own generous free daily
-quota). The only thing you may pay for is Twilio SMS (a few cents per message)
-and, in the US, the one-time A2P/Toll-Free registration. If you ever outgrow the
-free tier, bump `MODEL` in `newstexter/__init__.py` or add billing in AI Studio.
+covers frequent polling and replies — a Gemini call only happens on cycles that
+actually find new stories, so most polls are free RSS fetches with no model call.
+The only thing you may pay for is Twilio SMS (a few cents per message) and, in
+the US, the one-time A2P/Toll-Free registration. If you ever bump into free-tier
+limits, widen `poll_interval_minutes` in `sources.yaml`, or bump `MODEL` /
+add billing in AI Studio.
 
 ## Setup
 
@@ -58,18 +62,20 @@ free tier, bump `MODEL` in `newstexter/__init__.py` or add billing in AI Studio.
 ## Run
 
 ```sh
-# Preview the digest without sending or spending on SMS:
+# Preview curation (slanted picks + a neutral comparison); sends nothing:
 python -m newstexter.main --dry-run
 
-# Send the daily digest now:
+# Run one live poll cycle now (texts any new stories since last run):
 python -m newstexter.main
 
-# Send only breaking-tier stories:
-python -m newstexter.main --breaking
-
-# Run the always-on service (webhook + scheduler):
+# Run the always-on service — polls every poll_interval_minutes + serves /sms:
 uvicorn newstexter.app:app --host 0.0.0.0 --port 8000
 ```
+
+Stories are texted **per story, as they appear** — there's no nightly batch.
+Tune cadence and volume in `sources.yaml`: `poll_interval_minutes` (how often to
+check), `max_items` (cap per check), and `min_tier` (raise to `medium`/`high` to
+cut noise).
 
 ### Testing inbound replies locally
 

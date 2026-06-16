@@ -51,6 +51,11 @@ def is_seen(conn: sqlite3.Connection, url_hash: str) -> bool:
     return row is not None
 
 
+def is_empty(conn: sqlite3.Connection) -> bool:
+    """True if no story has ever been recorded (used to detect a cold start)."""
+    return conn.execute("SELECT 1 FROM seen LIMIT 1").fetchone() is None
+
+
 def mark_seen(conn: sqlite3.Connection, url_hash: str) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO seen (url_hash, sent_at) VALUES (?, ?)",

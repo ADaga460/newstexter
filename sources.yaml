@@ -45,19 +45,17 @@ recipients:
   - "+15551234567"
 
 settings:
-  # Max stories per digest.
+  # Stories are texted as they appear (per story), not batched into a digest.
+  # How often to check the feeds for newly-published stories.
+  poll_interval_minutes: 15
+  # Safety cap on how many stories can be texted in a single check (anti-flood).
   max_items: 7
-  # Only consider articles published within this many hours.
-  lookback_hours: 24
-  # One SMS per story (true) vs. a single combined message (false).
-  one_message_per_item: false
-  # Lowest tier to include in the daily digest: low | medium | high | breaking.
+  # One SMS per story (true) — keep true for as-it-happens delivery.
+  one_message_per_item: true
+  # Lowest tier to text: low | medium | high | breaking. Raise to reduce volume.
   min_tier: low
-  # Cron for the daily digest (server local time). Default ~8am.
-  digest_cron: "0 8 * * *"
-  # Optional off-cycle check that sends ONLY breaking-tier stories.
-  # Set to a cron string (e.g. "0 * * * *" for hourly) or leave empty to disable.
-  breaking_check_cron: ""
+  # Only consider articles published within this many hours (recency guard).
+  lookback_hours: 24
 
   # The analytical voice applied when writing each blurb/summary. Curation stays
   # factually faithful to the source — this controls framing and emphasis only.

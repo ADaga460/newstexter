@@ -31,12 +31,11 @@ class Feed:
 
 @dataclass
 class Settings:
-    max_items: int = 5
+    max_items: int = 7              # cap on stories texted per poll cycle
     lookback_hours: int = 24
     one_message_per_item: bool = True
     min_tier: str = "low"
-    digest_cron: str = "0 8 * * *"
-    breaking_check_cron: str = ""
+    poll_interval_minutes: int = 15  # how often to check feeds for new stories
     editorial_voice: str = ""
 
 
