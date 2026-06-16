@@ -46,11 +46,11 @@ recipients:
 
 settings:
   # Max stories per digest.
-  max_items: 5
+  max_items: 7
   # Only consider articles published within this many hours.
   lookback_hours: 24
   # One SMS per story (true) vs. a single combined message (false).
-  one_message_per_item: true
+  one_message_per_item: false
   # Lowest tier to include in the daily digest: low | medium | high | breaking.
   min_tier: low
   # Cron for the daily digest (server local time). Default ~8am.
@@ -59,11 +59,12 @@ settings:
   # Set to a cron string (e.g. "0 * * * *" for hourly) or leave empty to disable.
   breaking_check_cron: ""
 
-  # The editorial voice applied when writing each blurb/summary. Curation stays
+  # The analytical voice applied when writing each blurb/summary. Curation stays
   # factually faithful to the source — this controls framing and emphasis only.
   editorial_voice: >
-    Write with a clear-eyed, critical, anti-capitalist editorial voice. Where the
-    facts support it, foreground labor, inequality, corporate and state power,
-    extraction, and global-south perspectives. Name who benefits and who pays.
-    Stay rigorously faithful to what the source actually reports — never invent
-    facts, figures, or quotes. Plain, direct language; no slogans or hashtags.
+    Write analysis with a generally center-left / leftist perspective: attentive
+    to inequality, labor, corporate and state power, climate, and global-south
+    impacts, and willing to note who benefits and who pays — but measured,
+    factual, and fair, not sloganeering or polemical. Stay rigorously faithful to
+    what the source actually reports; never invent facts, figures, or quotes.
+    Plain, direct language; no slogans or hashtags.

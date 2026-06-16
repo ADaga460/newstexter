@@ -14,8 +14,8 @@ import logging
 from .config import Config, load_config
 from .curate import curate
 from .fetch import fetch_candidates
-from .format import build_messages, filter_by_min_tier, order_items
-from .send import broadcast
+from .format import build_messages, filter_by_min_tier, order_items, render_comparison
+from .send import broadcast, _safe_print
 from . import store
 
 log = logging.getLogger(__name__)
@@ -60,6 +60,16 @@ def run_digest(
             from_number=config.twilio_from,
             dry_run=dry_run,
         )
+
+        # Dry-run only: also show what a neutral (unslanted) editor would pick,
+        # so you can compare against the editorial selection above.
+        if dry_run and not breaking_only:
+            neutral = order_items(curate(candidates, settings, neutral=True, limit=settings.max_items))
+            _safe_print(
+                f"\n===== NEUTRAL TOP {settings.max_items} "
+                "(pure-neutral comparison — not part of what gets sent) ====="
+            )
+            _safe_print(render_comparison(neutral) if neutral else "(none)")
 
         # Record what we sent so it isn't repeated next run (skip in dry-run).
         if not dry_run:

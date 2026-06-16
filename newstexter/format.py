@@ -40,6 +40,15 @@ def render_digest(items: list[CuratedItem]) -> str:
     return "\n\n".join(render_item(it) for it in items)
 
 
+def render_comparison(items: list[CuratedItem]) -> str:
+    """A numbered, human-readable list for the dry-run neutral comparison."""
+    lines = []
+    for i, it in enumerate(items, 1):
+        label = TIER_LABEL.get(it.tier, it.tier.upper())
+        lines.append(f"{i}. {label} ({it.source}) {it.blurb}\n   {it.summary}\n   {it.link}")
+    return "\n\n".join(lines)
+
+
 def chunk(text: str, size: int = CHUNK_SIZE) -> list[str]:
     """Split a long body into SMS-sized pieces, preferring paragraph/line breaks."""
     if len(text) <= size:
