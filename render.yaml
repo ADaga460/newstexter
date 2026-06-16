@@ -15,7 +15,7 @@ services:
     envVars:
       - key: NEWSTEXTER_DB
         value: /var/data/newstexter.db
-      - key: ANTHROPIC_API_KEY
+      - key: GEMINI_API_KEY
         sync: false           # set in the Render dashboard (secret)
       - key: TWILIO_ACCOUNT_SID
         sync: false

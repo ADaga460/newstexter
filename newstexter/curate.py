@@ -1,9 +1,9 @@
-"""Curate fetched articles with Claude: select, tier, and write framed blurbs.
+"""Curate fetched articles with Gemini: select, tier, and write framed blurbs.
 
-A single Anthropic call takes the candidate articles and returns the most
-important / under-covered stories, each with an importance tier and a short
-blurb + 2-4 sentence summary written in the configured editorial voice. The
-model selects by index so it can never invent a link.
+A single Gemini call takes the candidate articles and returns the most important
+/ under-covered stories, each with an importance tier and a short blurb + 2-4
+sentence summary written in the configured editorial voice. The model selects by
+index so it can never invent a link.
 """
 
 from __future__ import annotations
@@ -12,12 +12,12 @@ import logging
 from dataclasses import dataclass
 from typing import Literal
 
-import anthropic
 from pydantic import BaseModel, Field
 
 from . import MODEL
 from .config import Settings
 from .fetch import Article
+from .llm import get_client
 
 log = logging.getLogger(__name__)
 
@@ -83,37 +83,35 @@ def curate(
     articles: list[Article],
     settings: Settings,
     *,
-    client: anthropic.Anthropic | None = None,
+    client=None,
 ) -> list[CuratedItem]:
     """Return curated, tiered items. Empty input yields an empty result."""
     if not articles:
         return []
 
-    client = client or anthropic.Anthropic()
-    system = [
-        {
-            "type": "text",
-            "text": _SYSTEM.format(voice=settings.editorial_voice.strip()),
-            # Stable prefix (instructions + voice) — cache it across runs.
-            "cache_control": {"type": "ephemeral"},
-        }
-    ]
+    from google.genai import types
+
+    client = client or get_client()
+    system = _SYSTEM.format(voice=settings.editorial_voice.strip())
     user = (
         f"Select up to {settings.max_items} stories from these "
         f"{len(articles)} candidates:\n\n{_render_candidates(articles)}"
     )
 
-    response = client.messages.parse(
+    response = client.models.generate_content(
         model=MODEL,
-        max_tokens=4000,
-        thinking={"type": "adaptive"},
-        system=system,
-        messages=[{"role": "user", "content": user}],
-        output_format=Curation,
+        contents=user,
+        config=types.GenerateContentConfig(
+            system_instruction=system,
+            response_mime_type="application/json",
+            response_schema=Curation,
+            temperature=0.3,
+        ),
     )
-    curation = response.parsed_output
+
+    curation = response.parsed
     if curation is None:
-        log.warning("Curation returned no parseable output (stop=%s)", response.stop_reason)
+        log.warning("Curation returned no parseable output.")
         return []
 
     items: list[CuratedItem] = []
