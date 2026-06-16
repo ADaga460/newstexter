@@ -1,0 +1,25 @@
+# Render Blueprint — deploy NewsTexter as an always-on web service with a
+# persistent disk for the SQLite DB. See README "Deploy" for the walkthrough.
+services:
+  - type: web
+    name: newstexter
+    runtime: python
+    plan: starter            # smallest always-on paid tier (free tier sleeps)
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn newstexter.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    disk:
+      name: data
+      mountPath: /var/data   # persistent storage for the SQLite DB
+      sizeGB: 1
+    envVars:
+      - key: NEWSTEXTER_DB
+        value: /var/data/newstexter.db
+      - key: ANTHROPIC_API_KEY
+        sync: false           # set in the Render dashboard (secret)
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false

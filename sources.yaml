@@ -1,0 +1,69 @@
+# NewsTexter configuration. Everything editorial lives here so you can tune the
+# digest without touching code. Restart the service after editing.
+
+# ---------------------------------------------------------------------------
+# Feeds — the source-level bias control.
+# Curated toward independent, global-south, and left-leaning outlets that cover
+# under-reported international stories. No right-leaning sources by design.
+# Add or remove freely; broken/unreachable feeds are skipped at runtime.
+# ---------------------------------------------------------------------------
+feeds:
+  - name: Al Jazeera
+    url: https://www.aljazeera.com/xml/rss/all.xml
+  - name: Democracy Now!
+    url: https://www.democracynow.org/democracynow.rss
+  - name: The Intercept
+    url: https://theintercept.com/feed/?rss
+  - name: openDemocracy
+    url: https://www.opendemocracy.net/en/feed/
+  - name: Common Dreams
+    url: https://www.commondreams.org/feeds/news.rss
+  - name: Truthout
+    url: https://truthout.org/feed/
+  - name: Jacobin
+    url: https://jacobin.com/feed/
+  - name: The New Humanitarian
+    url: https://www.thenewhumanitarian.org/rss.xml
+  - name: Inter Press Service
+    url: https://www.ipsnews.net/feed/
+  - name: Global Voices
+    url: https://globalvoices.org/feed/
+  - name: Rest of World
+    url: https://restofworld.org/feed/latest/
+  - name: Mongabay
+    url: https://news.mongabay.com/feed/
+  - name: Africa Is a Country
+    url: https://africasacountry.com/feed/
+  - name: The Guardian (World)
+    url: https://www.theguardian.com/world/rss
+
+# ---------------------------------------------------------------------------
+# Recipients — E.164 phone numbers. This list ALSO doubles as the allowlist for
+# inbound two-way replies: only these numbers get answered.
+# ---------------------------------------------------------------------------
+recipients:
+  - "+15551234567"
+
+settings:
+  # Max stories per digest.
+  max_items: 5
+  # Only consider articles published within this many hours.
+  lookback_hours: 24
+  # One SMS per story (true) vs. a single combined message (false).
+  one_message_per_item: true
+  # Lowest tier to include in the daily digest: low | medium | high | breaking.
+  min_tier: low
+  # Cron for the daily digest (server local time). Default ~8am.
+  digest_cron: "0 8 * * *"
+  # Optional off-cycle check that sends ONLY breaking-tier stories.
+  # Set to a cron string (e.g. "0 * * * *" for hourly) or leave empty to disable.
+  breaking_check_cron: ""
+
+  # The editorial voice applied when writing each blurb/summary. Curation stays
+  # factually faithful to the source — this controls framing and emphasis only.
+  editorial_voice: >
+    Write with a clear-eyed, critical, anti-capitalist editorial voice. Where the
+    facts support it, foreground labor, inequality, corporate and state power,
+    extraction, and global-south perspectives. Name who benefits and who pays.
+    Stay rigorously faithful to what the source actually reports — never invent
+    facts, figures, or quotes. Plain, direct language; no slogans or hashtags.
